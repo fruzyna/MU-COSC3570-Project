@@ -36,7 +36,8 @@ newCrime$Month = NULL
 newCrime$Day = NULL
 
 #Filter out information to just that obtained between Jan 1 2013 through Dec 30 2014 (Overlapping years for all three datasets)
-newCrimeData <- filter(crimeData, (as.Date(crimeData$Date) >= as.Date("2013-1-15")) & (as.Date(crimeData$Date) <= as.Date("2014-12-30")))
+crimeData <- filter(newCrime, (as.Date(newCrime$Date) >= as.Date("2013-1-15")) & (as.Date(newCrime$Date) <= as.Date("2014-12-30")))
+newCrime = NULL
 
 #trafficData dates are already in the range specified
 #NOTE: CHECK FORMATTING IS IDENTICAL TO THE OTHERS (ISO)
