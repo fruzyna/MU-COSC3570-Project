@@ -97,3 +97,34 @@ trafficData <- trafficData[!(trafficData$SPEED=="-1"),]
 #
 
 
+#
+# Data Plotting
+#
+
+#Create a map of illinois
+illinoisMap <- ggplot() +
+  borders(database = "state", region = "illinois", colour = "grey60", fill = "grey60") +
+  ggtitle("Illinois") +
+  xlab("Longitude") +
+  ylab("Latitude") +
+  theme(panel.background = element_blank())
+
+#Create a map of Chicago
+chicagoMap <- ggplot() +
+  borders(database = "world", colour = "grey60", fill = "grey60") +
+  ggtitle("Probably just Chicago?") +
+  coord_cartesian( 
+    xlim = c(-87.96, -87.5),
+    ylim = c(41.62, 42.05)) +
+  xlab("Longitude") +
+  ylab("Latitude") +
+  theme(panel.background = element_blank())
+
+#Add information to the Chicago map
+chicagoMap + 
+  geom_point(data = dataset, mapping = aes(x = Longitude, y = Latitude), color = "red") +
+  ggtitle("Information")
+
+
+
+
