@@ -4,8 +4,19 @@
 #  Date Created:          6 March 2018
 #  Date Last Modified:    24 March 2018
 #  Purpose:               Clean and analyze data found for weather, traffic and crime within Chicago for years 2013-2015
-#  Datasets Needed:       https://data.cityofchicago.org/Transportation/Chicago-Traffic-Tracker-Congestion-Estimates-by-Se/n4j6-wkkf
-  
+#  Versioning Plan:       1.1: All data clean and combined
+#                         1.2: Basic visualizations
+#                         1.3: Linear modeling
+#                         2.0: Final project deliverable
+#  External Datasets:     https://data.cityofchicago.org/Transportation/Chicago-Traffic-Tracker-Congestion-Estimates-by-Se/n4j6-wkkf
+#
+#
+# TO_CITE:  https://www.r-bloggers.com/visualising-thefts-using-heatmaps-in-ggplot2/
+#           
+
+
+
+
 #
 # SETUP
 #
@@ -15,13 +26,21 @@
 #Package installations if needed
 #install.packages("geosphere")
 #install.packages("tidyverse")
+#install.packages("mice")
+#install.packages("dplyr")
 #install.packages("geosphere")
+#install.packages("maps")
+#install.packages("ggmap")
+
 
 #Library imports
 library(tidyverse)
 library(reshape2)
 library(geosphere)
 library(dplyr)
+library(maps)
+library(ggmap)
+library(mice)
 
 #Set working directory to location where data is stored
 setwd("~/Desktop/MATH 3570 Project/data")
@@ -138,6 +157,8 @@ weatherData$"Fastest 5-second wind speed" <- NULL
 weatherData$"Peak gust time" <- NULL
 weatherData$LATITUDE <- NULL
 weatherData$LONGITUDE <- NULL
+weatherData$"AVG_TEMP(F)" <- NULL
+
 
 #Create central tendency (median) column
 weatherData$"MEDIAN_TEMPERATURE(F)" <- ((weatherData$MAX_TEMP - weatherData$MIN_TEMP) / 2) + weatherData$MIN_TEMP
@@ -183,6 +204,7 @@ roadSegmentData$LAST_UPDATED <- NULL
 
 #Combine roadSegmentData and trafficData by the segment ID provided
 trafficData <- merge(trafficData, roadSegmentData, by  = "SEGMENTID") 
+roadSegmentData <- NULL
 
 #Remove the now extraneous segment ID
 trafficData$SEGMENTID <- NULL
@@ -210,7 +232,7 @@ colnames(trafficData)[colnames(trafficData)=="SPEED"] <- "CONGESTION_LEVEL"
 #
 
 #Remove crime observations that have no applicable data (missing location, or type of crime)
-#NOTE: TODO
+crimeData <- na.omit(crimeData, cols=c("LATITUDE", "LONGITUDE", "CRIME_TYPE"))
 
 #Remove superfluous crime variables
 crimeData$ID <- NULL
@@ -250,45 +272,68 @@ colnames(crimeData)[colnames(crimeData)=="Date"] <- "DATE"
 
 
 #For each crime copy over the daily weather data
-#569592
-combData <- left_join(crimeData, weatherData, by=c("DATE"))
-nextcrimeData <- merge(crimeData, weatherData, by="DATE") 
+combData <- merge(crimeData, weatherData, by="DATE") 
 
-trafficData <- merge(trafficData, roadSegmentData, by  = "SEGMENTID") 
+#Remove originating datasets from memory
+crimeData <- NULL
+weatherData <- NULL
 
 #For each crime, find the nearest location that has a measured congestion level
 
 #Determine distance between two points in longitude and latitude in meters
-distm (c(lon1, lat1), c(lon2, lat2), fun = distHaversine)
+#distm (c(lon1, lat1), c(lon2, lat2), fun = distHaversine)
+
+
+
+
+
+
 
 #
 # Data Plotting
 #
 
+#Plot all crimes by type within Chicago
+chicago <- get_map(location = 'chicago', zoom = 10)
+ggmap(chicago) +
+  geom_point(data = combData, mapping = aes(x = combData$LONGITUDE, y = combData$LATITUDE, color = combData$CRIME_TYPE))+
+  labs(color = "Crime Type", x = "Longitude", y = "Latitude") +
+  ggtitle("Locations of Crime within Chicago")
+
+
+#
+# NOTES AREA
+#
+
 #Create a map of illinois
-illinoisMap <- ggplot() +
-  borders(database = "state", region = "illinois", colour = "grey60", fill = "grey60") +
-  ggtitle("Illinois") +
-  xlab("Longitude") +
-  ylab("Latitude") +
-  theme(panel.background = element_blank())
-
-#Create a map of Chicago
-chicagoMap <- ggplot() +
-  borders(database = "world", colour = "grey60", fill = "grey60") +
-  ggtitle("Probably just Chicago?") +
-  coord_cartesian( 
-    xlim = c(-87.96, -87.5),
-    ylim = c(41.62, 42.05)) +
-  xlab("Longitude") +
-  ylab("Latitude") +
-  theme(panel.background = element_blank())
-
-#Add information to the Chicago map
-chicagoMap + 
-  geom_point(data = dataset, mapping = aes(x = Longitude, y = Latitude), color = "red") +
-  ggtitle("Information")
-
-
-
-
+# illinoisMap <- ggplot() +
+#   borders(database = "state", region = "illinois", colour = "grey60", fill = "grey60") +
+#   ggtitle("Illinois") +
+#   xlab("Longitude") +
+#   ylab("Latitude") +
+#   theme(panel.background = element_blank())
+# 
+# #Create a map of Chicago
+# chicagoMap <- ggplot() +
+#   borders(database = "world", colour = "grey60", fill = "grey60") +
+#   ggtitle("Probably just Chicago?") +
+#   coord_cartesian( 
+#     xlim = c(-87.96, -87.5),
+#     ylim = c(41.62, 42.05)) +
+#   xlab("Longitude") +
+#   ylab("Latitude") +
+#   theme(panel.background = element_blank())
+# 
+# #Add information to the Chicago map
+# chicagoMap + 
+#   geom_point(data = dataset, mapping = aes(x = Longitude, y = Latitude), color = "red") +
+#   ggtitle("Information")
+# 
+# 
+# 
+# 
+# chicagoMap + 
+#   geom_point(data = crimeData, mapping = aes(x = crimeData$LONGITUDE, y = crimeData$LATITUDE), color = "red") +
+#   ggtitle("Information")
+# 
+# 
