@@ -2,16 +2,26 @@
 #  Version:               1.0
 #  Author:                Cade Dombrowski, David Helminiak, Reid Holben, Liam Fruzyna
 #  Date Created:          6 March 2018
-#  Date Last Modified:    6 March 2018
+#  Date Last Modified:    24 March 2018
 #  Purpose:               Clean and analyze data found for weather, traffic and crime within Chicago for years 2013-2015
-
+#  Datasets Needed:       https://data.cityofchicago.org/Transportation/Chicago-Traffic-Tracker-Congestion-Estimates-by-Se/n4j6-wkkf
+  
 #
 # SETUP
 #
 
+#NOTES: Download additional dataset: https://data.cityofchicago.org/Transportation/Chicago-Traffic-Tracker-Congestion-Estimates-by-Se/n4j6-wkkf for segment IDs
+
+#Package installations if needed
+#install.packages("geosphere")
+#install.packages("tidyverse")
+#install.packages("geosphere")
+
 #Library imports
 library(tidyverse)
 library(reshape2)
+library(geosphere)
+library(dplyr)
 
 #Set working directory to location where data is stored
 setwd("~/Desktop/MATH 3570 Project/data")
@@ -22,14 +32,16 @@ setwd("~/Desktop/MATH 3570 Project/data")
 weatherData <- read.csv("Chicago_Midway_Airport_Weather Station.csv")
 trafficData <- read.csv("Chicago_Traffic_Tracker_-_Historical_Congestion_Estimates_by_Segment.csv")
 crimeData <- read.csv("Crimes_-_2001_to_present.csv")
+roadSegmentData <- read.csv("Chicago_Traffic_Tracker_-_Congestion_Estimates_by_Segments.csv")
 
 #
-#FILTER BY DATE
+#FIX DATE AND TIME FORMATTING
 #
 
 #Ignoring potential discrepencies caused by time zones, as primary interest is on daily information
 #Filter out information to just that obtained between Jan 1 2013 through Dec 30 2014 (Overlapping years for all three datasets)
 weatherData <- filter(weatherData, (as.Date(weatherData$DATE) >= as.Date("2013-1-15")) & (as.Date(weatherData$DATE) <= as.Date("2014-12-30")))
+weatherData$DATE <- as.Date(weatherData$DATE) #Place weather date infomration into date object format
 
 #Make a copy of the crime data
 newCrime <- crimeData
@@ -48,19 +60,97 @@ newCrime$Day = NULL
 crimeData <- filter(newCrime, (as.Date(newCrime$Date) >= as.Date("2013-1-15")) & (as.Date(newCrime$Date) <= as.Date("2014-12-30")))
 newCrime = NULL
 
-#trafficData dates are already in the range specified
-#NOTE: CHECK FORMATTING IS IDENTICAL TO THE OTHERS (ISO)
+#Split Date column into Date and time for traffic data
+trafficData$Date <- substring(trafficData$TIME,1,10)
+trafficData$Time <- substring(trafficData$TIME,12,29)
+#Remove the originating column
+trafficData$TIME <- NULL
+
+
+
+
+
+
+
+
 
 
 #
-#FIX WEATHER DATASET
+#CLEAN WEATHER DATASET
 #
 
 #Fix variable names for weather
-#NOTE: TODO
+names(weatherData)[31] <-paste("Fastest 2-minute wind speed")
+names(weatherData)[9] <-paste("Time of fastest mile or fastest 1-minute wind")
+names(weatherData)[33] <-paste("Fastest 5-second wind speed")
+names(weatherData)[15] <-paste("Snowfall")
+names(weatherData)[39] <-paste("THUNDER")
+names(weatherData)[13] <-paste("PRECIPITATION(in)")
+names(weatherData)[41] <-paste("HAIL")
+names(weatherData)[43] <-paste("SMOKE_HAZE")
+names(weatherData)[17] <-paste("Snow depth")
+names(weatherData)[27] <-paste("Direction of fastest 2-minute wind")
+names(weatherData)[7] <- paste("AVG_WIND_SPEED(MPH)")
+names(weatherData)[29] <-paste("Direction of fastest 5-second wind")
+names(weatherData)[45] <-paste("Tornado, waterspout, or funnel cloud")
+names(weatherData)[11] <-paste("Peak gust time")
+names(weatherData)[35] <-paste("Fog, ice fog, or freezing fog (may include heavy fog)")
+names(weatherData)[21] <-paste("MAX_TEMP  (F)")
+names(weatherData)[37] <-paste("Heavy fog or heaving freezing fog (not always distinguished from fog)")
+names(weatherData)[19] <-paste("AVG_TEMP(F)")
+names(weatherData)[23] <-paste("MIN_TEMP(F)")
+names(weatherData)[25] <-paste("Total sunshine for the period")
 
-#Remove superfluous weather variables
-#NOTE: TODO
+#Remove extraneous/unused/constants/empty columns
+weatherData$AWND_ATTRIBUTES <- NULL
+weatherData$FMTM_ATTRIBUTES <- NULL
+weatherData$PGTM_ATTRIBUTES <- NULL
+weatherData$PRCP_ATTRIBUTES <- NULL
+weatherData$SNOW_ATTRIBUTES <- NULL
+weatherData$SNWD_ATTRIBUTES <- NULL
+weatherData$TAVG_ATTRIBUTES <- NULL
+weatherData$TMAX_ATTRIBUTES <- NULL
+weatherData$TMIN_ATTRIBUTES <- NULL
+weatherData$TSUN_ATTRIBUTES <- NULL
+weatherData$WDF2_ATTRIBUTES <- NULL
+weatherData$WDF5_ATTRIBUTES <- NULL
+weatherData$WSF2_ATTRIBUTES <- NULL
+weatherData$WSF5_ATTRIBUTES <- NULL
+weatherData$WT01_ATTRIBUTES <- NULL
+weatherData$WT02_ATTRIBUTES <- NULL
+weatherData$WT03_ATTRIBUTES <- NULL
+weatherData$WT05_ATTRIBUTES <- NULL
+weatherData$WT08_ATTRIBUTES <- NULL
+weatherData$WT10_ATTRIBUTES <- NULL
+weatherData$STATION <- NULL
+weatherData$NAME <- NULL
+weatherData$ELEVATION <- NULL
+weatherData$"Time of fastest mile or fastest 1-minute wind" <- NULL
+weatherData$"Snowfall" <- NULL
+weatherData$"Snow depth" <- NULL
+weatherData$"Total sunshine for the period" <- NULL
+weatherData$"Average Temperature" <- NULL
+weatherData$"Tornado, waterspout, or funnel cloud" <- NULL
+weatherData$"Direction of fastest 2-minute wind" <- NULL
+weatherData$"Direction of fastest 5-second wind" <- NULL
+weatherData$"Fastest 2-minute wind speed" <- NULL
+weatherData$"Fastest 5-second wind speed" <- NULL
+weatherData$"Peak gust time" <- NULL
+weatherData$LATITUDE <- NULL
+weatherData$LONGITUDE <- NULL
+
+#Create central tendency (median) column
+weatherData$"MEDIAN_TEMPERATURE(F)" <- ((weatherData$MAX_TEMP - weatherData$MIN_TEMP) / 2) + weatherData$MIN_TEMP
+
+#Combine fog columns
+weatherData$FOG = ifelse(is.na(weatherData$"Heavy fog or heaving freezing fog (not always distinguished from fog)"), weatherData$"Fog, ice fog, or freezing fog (may include heavy fog)", weatherData$"Heavy fog or heaving freezing fog (not always distinguished from fog)")
+
+#Remove original fog columns
+weatherData$"Heavy fog or heaving freezing fog (not always distinguished from fog)" <- NULL
+weatherData$"Fog, ice fog, or freezing fog (may include heavy fog)" <- NULL
+
+
+
 
 
 
@@ -74,7 +164,42 @@ newCrime = NULL
 trafficData <- trafficData[!(trafficData$SPEED=="-1"),]
 
 #Remove superfluous traffic variables
-#NOTE: TODO
+trafficData$ID <- NULL
+
+#Rename variables as desired
+names(trafficData)[5] <- "DATE"
+names(trafficData)[6] <- "TIME"
+
+#Simplify roadSegmentData
+roadSegmentData$STREET <- NULL
+roadSegmentData$DIRECTION <- NULL
+roadSegmentData$FROM_STREET <- NULL
+roadSegmentData$TO_STREET <- NULL
+roadSegmentData$LENGTH <- NULL
+roadSegmentData$STREET_HEADING <- NULL
+roadSegmentData$COMMENTS <- NULL
+roadSegmentData$CURRENT_SPEED <- NULL
+roadSegmentData$LAST_UPDATED <- NULL
+
+#Combine roadSegmentData and trafficData by the segment ID provided
+trafficData <- merge(trafficData, roadSegmentData, by  = "SEGMENTID") 
+
+#Remove the now extraneous segment ID
+trafficData$SEGMENTID <- NULL
+
+#Use speeds to determine overall congestion level
+#Data source indicates 0-9, 10-20, and 21+ display heavy, medium, and free flow conditions
+trafficData$SPEED[trafficData$SPEED > 0 & trafficData$SPEED < 10] <- "Heavy"
+trafficData$SPEED[trafficData$SPEED > 0 & trafficData$SPEED < 21] <- "Medium"
+trafficData$SPEED[trafficData$SPEED >= 21] <- "FreeFlow"
+
+#Rename variable name
+colnames(trafficData)[colnames(trafficData)=="SPEED"] <- "CONGESTION_LEVEL"
+
+
+
+
+
 
 
 
@@ -88,14 +213,53 @@ trafficData <- trafficData[!(trafficData$SPEED=="-1"),]
 #NOTE: TODO
 
 #Remove superfluous crime variables
-#NOTE: TODO
+crimeData$ID <- NULL
+crimeData$Case.Number <- NULL
+crimeData$IUCR <- NULL
+crimeData$Arrest <- NULL
+crimeData$Beat <- NULL
+crimeData$District <- NULL
+crimeData$Ward <- NULL
+crimeData$Community.Area <- NULL
+crimeData$FBI.Code <- NULL
+crimeData$X.Coordinate <- NULL
+crimeData$Y.Coordinate <- NULL
+crimeData$Updated.On <- NULL
+crimeData$Location <- NULL
+crimeData$Domestic <- NULL
+crimeData$Location.Description <- NULL
+
+#Rename columns as desired
+colnames(crimeData)[colnames(crimeData)=="Block"] <- "BLOCK"
+colnames(crimeData)[colnames(crimeData)=="Primary.Type"] <- "CRIME_TYPE"
+colnames(crimeData)[colnames(crimeData)=="Description"] <- "CRIME_DESCRIPTION"
+colnames(crimeData)[colnames(crimeData)=="Latitude"] <- "LATITUDE"
+colnames(crimeData)[colnames(crimeData)=="Longitude"] <- "LONGITUDE"
+colnames(crimeData)[colnames(crimeData)=="Time"] <- "TIME"
+colnames(crimeData)[colnames(crimeData)=="Date"] <- "DATE"
+
+
+
+
 
 
 
 #
 # COMBINE DATASETS
-#
+# Note: Datasets should not share any variable names save that by which they are being combined
 
+
+#For each crime copy over the daily weather data
+#569592
+combData <- left_join(crimeData, weatherData, by=c("DATE"))
+nextcrimeData <- merge(crimeData, weatherData, by="DATE") 
+
+trafficData <- merge(trafficData, roadSegmentData, by  = "SEGMENTID") 
+
+#For each crime, find the nearest location that has a measured congestion level
+
+#Determine distance between two points in longitude and latitude in meters
+distm (c(lon1, lat1), c(lon2, lat2), fun = distHaversine)
 
 #
 # Data Plotting
