@@ -43,15 +43,15 @@ library(ggmap)
 library(mice)
 
 #Set working directory to location where data is stored
-#setwd("~/Desktop/MATH 3570 Project/data")
+setwd("~/Desktop/MATH 3570 Project/data")
 
 #
 #IMPORT DATASETS
 #
-weatherData <- read.csv("weather.csv")
-trafficData <- read.csv("traffic_historical.csv")
-crimeData <- read.csv("crimes.csv")
-roadSegmentData <- read.csv("traffic_current.csv")
+weatherData <- read.csv("Chicago_Midway_Airport_Weather Station.csv")
+trafficData <- read.csv("Chicago_Traffic_Tracker_-_Historical_Congestion_Estimates_by_Segment.csv")
+crimeData <- read.csv("Crimes_-_2001_to_present.csv")
+roadSegmentData <- read.csv("Chicago_Traffic_Tracker_-_Congestion_Estimates_by_Segments.csv")
 
 #
 #FIX DATE AND TIME FORMATTING
@@ -172,18 +172,9 @@ weatherData$"Fog, ice fog, or freezing fog (may include heavy fog)" <- NULL
 
 
 
-weatherData <- separate(weatherData, col='DATE', into=c('year','month', 'day'), sep='-')
-meanTemp = mean(weatherData$`MAX_TEMP  (F)`)
 
-weatherData$high = weatherData$`MAX_TEMP  (F)`
-averageHigh = aggregate(high ~ month, weatherData, mean)
 
-months = c('Jan', 'Feb', 'Mar', 'Apr', 'May', 'June', 'July', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec')
-barplot(averageHigh$high, names.arg=months)
 
-avgPrecip = aggregate(`PRECIPITATION(in)` ~ month, weatherData, mean)
-avgPrecip
-barplot(avgPrecip$`PRECIPITATION(in)`)
 
 
 #
@@ -283,6 +274,11 @@ colnames(crimeData)[colnames(crimeData)=="Date"] <- "DATE"
 #For each crime copy over the daily weather data
 combData <- merge(crimeData, weatherData, by="DATE") 
 
+# Save datasets to file for easier future use
+write.csv(combData, file='comb_data.csv')
+write.csv(trafficData, file='traffic_data.csv')
+write.csv(weatherData, file='weather_clean.csv')
+
 #Remove originating datasets from memory
 crimeData <- NULL
 weatherData <- NULL
@@ -293,27 +289,7 @@ weatherData <- NULL
 #distm (c(lon1, lat1), c(lon2, lat2), fun = distHaversine)
 
 
-write.csv(combData, file='comb_data.csv')
-write.csv(trafficData, file='traffic_data.csv')
 
-# most common by temperature
-aggregate(combData$CRIME_TYPE, list(combData$`MAX_TEMP  (F)`),
-          function(x) { 
-            ux <- unique(x) 
-            ux[which.max(tabulate(match(x, ux)))] })
-
-# mode
-aggregate(`MAX_TEMP  (F)` ~ CRIME_TYPE, combData, function(v) {
-  uniqv <- unique(v)
-  uniqv[which.max(tabulate(match(v, uniqv)))]
-})
-
-# delta from mean
-deltaMean = aggregate(`MAX_TEMP  (F)` ~ CRIME_TYPE, combData, function(v) {
-  delta <- mean(v) - meanTemp
-})
-deltaMean = deltaMean[!grepl('NON-CRIMINAL', deltaMean$CRIME_TYPE),]
-barplot(deltaMean$`MAX_TEMP  (F)`, names.arg=deltaMean$CRIME_TYPE, las=2)
 
 
 
