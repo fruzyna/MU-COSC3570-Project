@@ -41,6 +41,10 @@
 # brew install gdal2 --with-armadillo --with-complete --with-libkml --with-unsupported
 # brew link --force gdal2
 
+# IF USING A RED HAT BASED SYSTEM
+# dnf install proj-devel proj-epsg udunits-devel geos-devel dgal-devel
+# install.packages('udunits2', type = 'source', repo = 'cran.rstudio.com', configure.args='--with-udunits2-include=/usr/include/udunits2')
+
 #install.packages("sf")
 #install.packages("sp")
 #install.packages("maptools")
@@ -63,10 +67,10 @@ setwd("~/Desktop/MATH 3570 Project/data")
 #
 #IMPORT DATASETS
 #
-weatherData <- read.csv("Chicago_Midway_Airport_Weather Station.csv")
-trafficData <- read.csv("Chicago_Traffic_Tracker_-_Historical_Congestion_Estimates_by_Segment.csv")
-crimeData <- read.csv("Crimes_-_2001_to_present.csv")
-roadSegmentData <- read.csv("Chicago_Traffic_Tracker_-_Congestion_Estimates_by_Segments.csv")
+weatherData <- read.csv("weather.csv")
+trafficData <- read.csv("traffic_historical.csv")
+crimeData <- read.csv("crimes.csv")
+roadSegmentData <- read.csv("traffic_current.csv")
 
 #
 #FIX DATE AND TIME FORMATTING

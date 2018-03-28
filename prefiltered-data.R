@@ -70,11 +70,18 @@ deltaMean = aggregate(MAX_TEMP...F. ~ CRIME_TYPE, combData, function(v) {
 
 # plot delta mean temp by crime
 deltaMean = deltaMean[!grepl('NON-CRIMINAL', deltaMean$CRIME_TYPE),] # remove non criminal crimes
+deltaMean
 barplot(deltaMean$MAX_TEMP...F., names.arg=deltaMean$CRIME_TYPE, las=2, main="Delta Temeperature Between Annual Average and Average by Crime in Chicago", ylab="Degrees Above Annual Average (~59 F)", xlab="Crime Type")
 
 #Plot all crimes by type within Chicago
-chicago <- get_map(location = 'chicago', zoom = 10)
-ggmap(chicago) +
-  geom_point(data = combData, mapping = aes(x = combData$LONGITUDE, y = combData$LATITUDE, color = combData$CRIME_TYPE))+
-  labs(color = "Crime Type", x = "Longitude", y = "Latitude") +
-  ggtitle("Locations of Crime within Chicago")
+#chicago <- get_map(location = 'chicago', zoom = 10)
+#ggmap(chicago) +
+#  geom_point(data = combData, mapping = aes(x = combData$LONGITUDE, y = combData$LATITUDE, color = combData$CRIME_TYPE))+
+#  labs(color = "Crime Type", x = "Longitude", y = "Latitude") +
+#  ggtitle("Locations of Crime within Chicago")
+
+crime_congestion_counts = table(finalData$CONGESTION_LEVEL)
+barplot(crime_congestion_counts, main='Crimes per Congestion Level', xlab='Congestion Level', ylab='Total Crimes')
+
+total_congestion_counts = table(trafficData$CONGESTION_LEVEL)
+total_congestion_counts
