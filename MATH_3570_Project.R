@@ -2,7 +2,7 @@
 #  Version:               1.0
 #  Author:                Cade Dombrowski, David Helminiak, Reid Holben, Liam Fruzyna
 #  Date Created:          6 March 2018
-#  Date Last Modified:    24 March 2018
+#  Date Last Modified:    28 March 2018
 #  Purpose:               Clean and analyze data found for weather, traffic and crime within Chicago for years 2013-2015
 #  Versioning Plan:       1.1: All data clean and combined
 #                         1.2: Basic visualizations
@@ -32,7 +32,7 @@
 #install.packages("maps")
 #install.packages("ggmap")
 
-#IF USING A MAC
+#IF USING A MAC PRE OSX SIERRA
 # brew unlink gdal
 # brew tap osgeo/osgeo4mac && brew tap --repair
 # brew install proj
@@ -100,23 +100,13 @@ trafficData$DATE <- substring(trafficData$TIME,1,10)
 #Remove the originating column
 trafficData$TIME <- NULL
 
-#Split existing Date into Month Day and Year columns based on delimeter
-trafficData <- separate(data = trafficData, col = DATE, into = c("Month", "Day", "Year"), sep = "/")
-#Recombine into ISO date format
-trafficData$DATE <- as.Date(ISOdate(trafficData$Year, trafficData$Month, trafficData$Day))
-#Remove the temporary and now extranous columns
-trafficData$Year = NULL
-trafficData$Month = NULL
-trafficData$Day = NULL
-
-
 #
 #CLEAN WEATHER DATASET
 #
 
 #Fix variable names for weather
 names(weatherData)[31] <-paste("Fastest 2-minute wind speed")
-names(weatherData)[9] <- paste("Time of fastest mile or fastest 1-minute wind")
+names(weatherData)[9] <-paste("Time of fastest mile or fastest 1-minute wind")
 names(weatherData)[33] <-paste("Fastest 5-second wind speed")
 names(weatherData)[15] <-paste("Snowfall")
 names(weatherData)[39] <-paste("THUNDER")
@@ -175,7 +165,6 @@ weatherData$LATITUDE <- NULL
 weatherData$LONGITUDE <- NULL
 weatherData$"AVG_TEMP(F)" <- NULL
 
-
 #Create central tendency (median) column
 weatherData$"MEDIAN_TEMPERATURE(F)" <- ((weatherData$MAX_TEMP - weatherData$MIN_TEMP) / 2) + weatherData$MIN_TEMP
 
@@ -186,13 +175,6 @@ weatherData$FOG = ifelse(is.na(weatherData$"Heavy fog or heaving freezing fog (n
 weatherData$"Heavy fog or heaving freezing fog (not always distinguished from fog)" <- NULL
 weatherData$"Fog, ice fog, or freezing fog (may include heavy fog)" <- NULL
 
-
-
-
-
-
-
-
 #
 #FIX TRAFFIC AND ROADSEGMENT DATASETS
 #
@@ -202,13 +184,10 @@ trafficData$SPEED <- as.integer(trafficData$SPEED)
 
 #Remove observations that have no speed values
 trafficData <- na.omit(trafficData, cols=c("SPEED"))
-trafficData <- trafficData[!(trafficData$SPEED=="-1") ,]
+trafficData <- trafficData[!(trafficData$SPEED=="-1"),]
 
 #Remove superfluous traffic variables
 trafficData$ID <- NULL
-trafficData$BUS.COUNT <- NULL
-trafficData$MESSAGE.COUNT <- NULL
-trafficData$SPEED <- NULL
 
 #Simplify roadSegmentData
 roadSegmentData$STREET <- NULL
@@ -230,12 +209,6 @@ trafficData$CONGESTION_LEVEL[trafficData$SPEED >= 21] <- "FreeFlow"
 #Remove the now extraneous Speed column
 trafficData$SPEED <- NULL
 
-
-
-
-
-
-
 #
 #FIX CRIME DATASET
 #
@@ -245,6 +218,7 @@ crimeData <- na.omit(crimeData, cols=c("LATITUDE", "LONGITUDE", "CRIME_TYPE"))
 
 #Remove superfluous crime variables
 crimeData$ID <- NULL
+crimeData$Block <- NULL
 crimeData$Case.Number <- NULL
 crimeData$IUCR <- NULL
 crimeData$Arrest <- NULL
@@ -262,19 +236,12 @@ crimeData$Location.Description <- NULL
 
 #Rename columns as desired
 colnames(crimeData)[colnames(crimeData)=="Domestic"] <- "DOMESTIC"
-colnames(crimeData)[colnames(crimeData)=="Block"] <- "BLOCK"
 colnames(crimeData)[colnames(crimeData)=="Primary.Type"] <- "CRIME_TYPE"
 colnames(crimeData)[colnames(crimeData)=="Description"] <- "CRIME_DESCRIPTION"
 colnames(crimeData)[colnames(crimeData)=="Latitude"] <- "LATITUDE"
 colnames(crimeData)[colnames(crimeData)=="Longitude"] <- "LONGITUDE"
 colnames(crimeData)[colnames(crimeData)=="Time"] <- "TIME"
 colnames(crimeData)[colnames(crimeData)=="Date"] <- "DATE"
-
-
-
-
-
-
 
 #
 # COMBINE DATASETS
@@ -284,24 +251,12 @@ colnames(crimeData)[colnames(crimeData)=="Date"] <- "DATE"
 #For each crime copy over the daily weather data
 combData <- merge(crimeData, weatherData, by="DATE") 
 
-# Save datasets to file for easier future use
-write.csv(combData, file='comb_data.csv')
-write.csv(trafficData, file='traffic_data.csv')
-write.csv(weatherData, file='weather_clean.csv')
-
 #Remove originating datasets from memory
 crimeData <- NULL
 weatherData <- NULL
 
-#For each crime, find the nearest location that has a measured congestion level
-
-#Determine distance between two points in longitude and latitude in meters
-#distm (c(lon1, lat1), c(lon2, lat2), fun = distHaversine)
-
-
-
-
-#Road segment
+#Match each crime location to the nearest traffic line
+# Create spatial line lists for each traffic segment; id = segmentid
 lineList <- vector("list", 1)  #Create a temporary "list" for holding lines
 spatialLineList <- list() #Create an empty list of spatial lines
 
@@ -311,44 +266,37 @@ for (i in 1:nrow(roadSegmentData)) {
   lineList[[1]] <- Line(matrix(c (roadSegmentData$START_LONGITUDE[i], roadSegmentData$END_LONGITUDE[i], roadSegmentData$START_LATITUDE[i], roadSegmentData$END_LATITUDE[i]), nrow = 2, ncol = 2))
   spatialLineList[[i]] <- SpatialLines(list(Lines(lineList, ID = roadSegmentData$SEGMENTID[i])), proj4string = CRS(as.character(NA)))
 }
-merged.lines <- do.call(rbind, spatialLineList) #Combine the spatial lines together
 
+#Combine the spatial lines together in a single list
+merged.lines <- do.call(rbind, spatialLineList) 
+
+#For each crime location, identify the nearest line, saving the corresponding segment id to the combined dataset
 for (i in 1:nrow(combData)) { 
   crimePoint <- SpatialPoints(data.frame(LONGITUDE=c(combData$LONGITUDE[i]), LATITUDE=c(combData$LATITUDE[i])))
   nearestSegement <- snapPointsToLines(crimePoint, merged.lines, maxDist = NA, withAttrs = FALSE, idField=NA)
   combData$SEGMENTID[i] <- as.numeric(as.character(nearestSegement$nearest_line_id))
+  #message((i/nrow(combData)*100), "% Complete") #Print debug message
 }
 
+#Merge traffic data with combined dataset
 finalData <- inner_join(combData, trafficData, by = c("DATE", "SEGMENTID")) 
 
+#Clean final dataset
+finalData$SEGMENTID <- NULL
+
+#Clean workspace
+combData <- NULL
+crimePoint <- NULL
+lineList <- NULL
+spatialLineList <- NULL
+nearestSegement <- NULL
+roadSegmentData <- NULL
+trafficData <- NULL
+
+#Load dataset as previously calculated
+#load("finalDataEnvironment.RData")
 
 
-
-
-
-
-# 
-# #######TEMP TEST
-# headComb <- head(combData)
-# headtraffic <- head(trafficData)
-# 
-# for (i in 1:nrow(headComb)) { 
-#   crimePoint <- SpatialPoints(data.frame(LONGITUDE=c(headComb$LONGITUDE[i]), LATITUDE=c(headComb$LATITUDE[i])))
-#   nearestSegement <- snapPointsToLines(crimePoint, merged.lines, maxDist = NA, withAttrs = FALSE, idField=NA)
-#   headComb$SEGMENTID[i] <- as.numeric(as.character(nearestSegement$nearest_line_id))
-# }
-# 
-#test <- inner_join(headComb, trafficData, by = c("DATE", "SEGMENTID")) 
-# testLine <- headComb[1, ]
-# testLine$CONGESTION_LEVEL <- NULL
-# 
-# #Estimated time for merge with
-# #test <- merge(headComb, trafficData, by = c("DATE","SEGMENTID")) 
-# # 22 DAYS
-# #headComb <- merge(headComb, trafficData, by = c("DATE", "SEGMENTID")) 
-# # 21 DAYS
-# 
-# #############
 
 
 #
@@ -361,7 +309,6 @@ ggmap(chicago) +
   geom_point(data = combData, mapping = aes(x = combData$LONGITUDE, y = combData$LATITUDE, color = combData$CRIME_TYPE))+
   labs(color = "Crime Type", x = "Longitude", y = "Latitude") +
   ggtitle("Locations of Crime within Chicago")
-
 
 #
 # NOTES AREA
