@@ -311,12 +311,10 @@ merged.lines <- do.call(rbind, spatialLineList) #Combine the spatial lines toget
 for (i in 1:nrow(combData)) { 
   crimePoint <- SpatialPoints(data.frame(LONGITUDE=c(combData$LONGITUDE[i]), LATITUDE=c(combData$LATITUDE[i])))
   nearestSegement <- snapPointsToLines(crimePoint, merged.lines, maxDist = NA, withAttrs = FALSE, idField=NA)
-  combData$NEARESTSEGMENTID[i] <- as.numeric(as.character(nearestSegement$nearest_line_id))
+  combData$SEGMENTID[i] <- as.numeric(as.character(nearestSegement$nearest_line_id))
 }
 
-
-#NOTE FIX TRAFFIC DATA BEFORE RUNNING!!!
-finalData <- merge(combData, trafficData, by = c("DATE", "SEGMENTID")) 
+finalData <- inner_join(combData, trafficData, by = c("DATE", "SEGMENTID")) 
 
 
 
@@ -335,7 +333,7 @@ finalData <- merge(combData, trafficData, by = c("DATE", "SEGMENTID"))
 #   headComb$SEGMENTID[i] <- as.numeric(as.character(nearestSegement$nearest_line_id))
 # }
 # 
-# headComb <- merge(headComb, trafficData, by = c("DATE", "SEGMENTID")) 
+#test <- inner_join(headComb, trafficData, by = c("DATE", "SEGMENTID")) 
 # testLine <- headComb[1, ]
 # testLine$CONGESTION_LEVEL <- NULL
 # 
@@ -346,35 +344,6 @@ finalData <- merge(combData, trafficData, by = c("DATE", "SEGMENTID"))
 # # 21 DAYS
 # 
 # #############
-
-
-
-
-trafficData <- merge(trafficData, roadSegmentData, by = c("SEGMENTID","DATE")) 
-
-
-combHead <- head(combData)
-
-
-z <- lapply(intersect(combHead$NEARESTSEGMENTID,trafficData$SEGMENTID),function(id) {
-  d1 <- subset(combHead,ID==combHead$NEARESTSEGMENTID)
-  d2 <- subset(trafficData,ID==trafficData$SEGMENTID)
-  
-  d1$indices <- sapply(d1$dateTarget,function(d) which.min(abs(d2$dateTarget - d)))
-  d2$indices <- 1:nrow(d2)
-  
-  merge(d1,d2,by=c('ID','indices'))
-})
-
-z2 <- do.call(rbind,z)
-z2$indices <- NULL
-
-
-
-
-
-combNewHead <- merge(combHead, trafficData, by  = "SEGMENTID")
-
 
 
 #
