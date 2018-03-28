@@ -284,6 +284,11 @@ colnames(crimeData)[colnames(crimeData)=="Date"] <- "DATE"
 #For each crime copy over the daily weather data
 combData <- merge(crimeData, weatherData, by="DATE") 
 
+# Save datasets to file for easier future use
+write.csv(combData, file='comb_data.csv')
+write.csv(trafficData, file='traffic_data.csv')
+write.csv(weatherData, file='weather_clean.csv')
+
 #Remove originating datasets from memory
 crimeData <- NULL
 weatherData <- NULL
