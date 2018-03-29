@@ -1,5 +1,5 @@
 #  Program:               MATH_3570_Project
-#  Version:               1.1
+#  Version:               1.2
 #  Author:                Cade Dombrowski, David Helminiak, Reid Holben, Liam Fruzyna
 #  Date Created:          6 March 2018
 #  Date Last Modified:    24 March 2018
@@ -63,7 +63,6 @@
   # On a RHL Based Distro
   # dnf install proj-devel proj-epsg udunits2-devel geos-devel gdal-devel
   # install.packages('udunits2', type = 'source', repo = 'cran.rstudio.com', configure.args='--with-udunits2-include=/usr/include/udunits2')
-
 
 
 #Library imports
