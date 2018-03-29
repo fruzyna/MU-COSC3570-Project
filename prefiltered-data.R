@@ -28,18 +28,18 @@ barplot(avgPrecip$`PRECIPITATION(in)`, names.arg=months, main="Average Precipita
 #
 
 # most common by temperature
-aggregate(finalData$CRIME_TYPE, list(finalData$`MAX_TEMP  (F)`),
+aggregate(finalData$CRIME_TYPE, list(finalData$`MAX_TEMP(F)`),
           function(x) { 
             ux <- unique(x) 
             ux[which.max(tabulate(match(x, ux)))]})
 
 # mode
-aggregate(`MAX_TEMP  (F)` ~ CRIME_TYPE, finalData, function(v) {
+aggregate(`MAX_TEMP(F)` ~ CRIME_TYPE, finalData, function(v) {
   uniqv <- unique(v)
   uniqv[which.max(tabulate(match(v, uniqv)))]})
 
 # delta from mean
-deltaMean = aggregate(`MAX_TEMP  (F)` ~ CRIME_TYPE, finalData, function(t) {
+deltaMean = aggregate(`MAX_TEMP(F)` ~ CRIME_TYPE, finalData, function(t) {
   delta <- mean(t) - meanTemp})
 
 instances = list()
@@ -54,13 +54,13 @@ deltaMean = deltaMean[deltaMean$CRIME_TYPE != 'INTERFERENCE WITH PUBLIC OFFICER'
 deltaMean
 
 par(mar = c(15,4,4,2) + 0.1) # improve margins for long names
-barplot(deltaMean$`MAX_TEMP  (F)`, names.arg=deltaMean$CRIME_TYPE, las=2, main="Delta Temperature Between Annual Average and Average by Crime in Chicago", ylab="Degrees Above Annual Average (~59 F)")
+barplot(deltaMean$`MAX_TEMP(F)`, names.arg=deltaMean$CRIME_TYPE, las=2, main="Delta Temperature Between Annual Average and Average by Crime in Chicago", ylab="Degrees Above Annual Average (~59 F)")
 title(xlab="Crime Type", line=13) # custom x label location
 par(mar = c(5,4,4,2) + 0.1) # reset margins
 
 
 # number of crimes by temperature
-crimesPerTemp = table(finalData$`MAX_TEMP  (F)`)
+crimesPerTemp = table(finalData$`MAX_TEMP(F)`)
 plot(crimesPerTemp, type='o', main='Number of Crimes by Temperature', ylab='Crimes', xlab='Temperature (F)')
 
 
@@ -219,4 +219,4 @@ barplot(counts, main='Crimes per Congestion Level (Scaled)', xlab='Congestion Le
 # EVERYTHING!
 #
 
-qplot(`MAX_TEMP  (F)`, `PRECIPITATION(in)`, data=finalData, facets=CONGESTION_LEVEL~CRIME_TYPE)
+qplot(`MAX_TEMP(F)`, `PRECIPITATION(in)`, data=finalData, facets=CONGESTION_LEVEL~CRIME_TYPE)
