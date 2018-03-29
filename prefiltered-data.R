@@ -28,18 +28,18 @@ barplot(avgPrecip$`PRECIPITATION(in)`, names.arg=months, main="Average Precipita
 #
 
 # most common by temperature
-aggregate(finalData$CRIME_TYPE, list(finalData$`MAX_TEMP(F)`),
+aggregate(finalData$CRIME_TYPE, list(finalData$`MAX_TEMP  (F)`),
           function(x) { 
             ux <- unique(x) 
             ux[which.max(tabulate(match(x, ux)))]})
 
 # mode
-aggregate(`MAX_TEMP(F)` ~ CRIME_TYPE, finalData, function(v) {
+aggregate(`MAX_TEMP  (F)` ~ CRIME_TYPE, finalData, function(v) {
   uniqv <- unique(v)
   uniqv[which.max(tabulate(match(v, uniqv)))]})
 
 # delta from mean
-deltaMean = aggregate(`MAX_TEMP(F)` ~ CRIME_TYPE, finalData, function(t) {
+deltaMean = aggregate(`MAX_TEMP  (F)` ~ CRIME_TYPE, finalData, function(t) {
   delta <- mean(t) - meanTemp})
 
 instances = list()
@@ -49,17 +49,18 @@ for(type in deltaMean$CRIME_TYPE) {
 deltaMean$instances = instances
 
 # plot delta mean temp by crime
-deltaMean = deltaMean[deltaMean$instances > 500,] # remove non criminal crimes
+deltaMean = deltaMean[deltaMean$instances > 500,]
+deltaMean = deltaMean[deltaMean$CRIME_TYPE != 'INTERFERENCE WITH PUBLIC OFFICER',]
 deltaMean
 
-par(mar = c(12,4,4,2) + 0.1) # improve margins for long names
-barplot(deltaMean$`MAX_TEMP(F)`, names.arg=deltaMean$CRIME_TYPE, las=2, main="Delta Temperature Between Annual Average and Average by Crime in Chicago", ylab="Degrees Above Annual Average (~59 F)")
-title(xlab="Crime Type", line=11) # custom x label location
+par(mar = c(15,4,4,2) + 0.1) # improve margins for long names
+barplot(deltaMean$`MAX_TEMP  (F)`, names.arg=deltaMean$CRIME_TYPE, las=2, main="Delta Temperature Between Annual Average and Average by Crime in Chicago", ylab="Degrees Above Annual Average (~59 F)")
+title(xlab="Crime Type", line=13) # custom x label location
 par(mar = c(5,4,4,2) + 0.1) # reset margins
 
 
 # number of crimes by temperature
-crimesPerTemp = table(finalData$`MAX_TEMP(F)`)
+crimesPerTemp = table(finalData$`MAX_TEMP  (F)`)
 plot(crimesPerTemp, type='o', main='Number of Crimes by Temperature', ylab='Crimes', xlab='Temperature (F)')
 
 
@@ -71,31 +72,31 @@ plot(crimesPerDay, type='o', main='Number of Crimes by Day', ylab='Crimes', xlab
 # Below data is using combData, because we screwed up
 #
 
-# crimes by day from raw
-combData = read.csv('data/comb_data.csv')
-crimesPerDay2 = table(combData$DATE)
-plot(crimesPerDay2, type='o', main='Number of Crimes by Day', ylab='Crimes', xlab='Date')
-
-
-# delta from mean
-deltaMean2 = aggregate(`MAX_TEMP...F.` ~ CRIME_TYPE, combData, function(t) {
-  delta <- mean(t) - meanTemp})
-
-instances = list()
-for(type in deltaMean2$CRIME_TYPE) {
-  instances[[type]] <- sum(combData$CRIME_TYPE == type)
-}
-deltaMean2$instances = instances
-
-# plot delta mean temp by crime
-deltaMean2 = deltaMean2[deltaMean2$instances > 500,] # remove non criminal crimes
-deltaMean2 = deltaMean2[deltaMean2$CRIME_TYPE != 'INTERFERENCE WITH PUBLIC OFFICER',] # remove non criminal crimes
-deltaMean2
-
-par(mar = c(15,4,4,2) + 0.1) # improve margins for long names
-barplot(deltaMean2$`MAX_TEMP...F.`, names.arg=deltaMean2$CRIME_TYPE, las=2, main="Delta Temperature Between Annual Average and Average by Crime in Chicago", ylab="Degrees Above Annual Average (~59 F)")
-title(xlab="Crime Type", line=13) # custom x label location
-par(mar = c(5,4,4,2) + 0.1) # reset margins
+# # crimes by day from raw
+# combData = read.csv('data/comb_data.csv')
+# crimesPerDay2 = table(combData$DATE)
+# plot(crimesPerDay2, type='o', main='Number of Crimes by Day', ylab='Crimes', xlab='Date')
+# 
+# 
+# # delta from mean
+# deltaMean2 = aggregate(`MAX_TEMP...F.` ~ CRIME_TYPE, combData, function(t) {
+#   delta <- mean(t) - meanTemp})
+# 
+# instances = list()
+# for(type in deltaMean2$CRIME_TYPE) {
+#   instances[[type]] <- sum(combData$CRIME_TYPE == type)
+# }
+# deltaMean2$instances = instances
+# 
+# # plot delta mean temp by crime
+# deltaMean2 = deltaMean2[deltaMean2$instances > 500,]
+# deltaMean2 = deltaMean2[deltaMean2$CRIME_TYPE != 'INTERFERENCE WITH PUBLIC OFFICER',]
+# deltaMean2
+# 
+# par(mar = c(15,4,4,2) + 0.1) # improve margins for long names
+# barplot(deltaMean2$`MAX_TEMP...F.`, names.arg=deltaMean2$CRIME_TYPE, las=2, main="Delta Temperature Between Annual Average and Average by Crime in Chicago", ylab="Degrees Above Annual Average (~59 F)")
+# title(xlab="Crime Type", line=13) # custom x label location
+# par(mar = c(5,4,4,2) + 0.1) # reset margins
 
 #
 # Resume normal data
@@ -218,4 +219,4 @@ barplot(counts, main='Crimes per Congestion Level (Scaled)', xlab='Congestion Le
 # EVERYTHING!
 #
 
-qplot(`MAX_TEMP(F)`, `PRECIPITATION(in)`, data=finalData, facets=CONGESTION_LEVEL~CRIME_TYPE)
+qplot(`MAX_TEMP  (F)`, `PRECIPITATION(in)`, data=finalData, facets=CONGESTION_LEVEL~CRIME_TYPE)
