@@ -1,4 +1,8 @@
-# Data analysis (visualizations) based on already cleaned and saved to file data
+# Data analysis (visualizations) based on already cleaned data
+
+# Necessary Libraries
+library(tidyverse)
+library(ggmap)
 
 #
 # Just Weather
@@ -24,18 +28,18 @@ barplot(avgPrecip$`PRECIPITATION(in)`, names.arg=months, main="Average Percipita
 #
 
 # most common by temperature
-aggregate(finalData$CRIME_TYPE, list(finalData$`MAX_TEMP  (F)`),
+aggregate(finalData$CRIME_TYPE, list(finalData$`MAX_TEMP(F)`),
           function(x) { 
             ux <- unique(x) 
             ux[which.max(tabulate(match(x, ux)))]})
 
 # mode
-aggregate(`MAX_TEMP  (F)` ~ CRIME_TYPE, finalData, function(v) {
+aggregate(`MAX_TEMP(F)` ~ CRIME_TYPE, finalData, function(v) {
   uniqv <- unique(v)
   uniqv[which.max(tabulate(match(v, uniqv)))]})
 
 # delta from mean
-deltaMean = aggregate(`MAX_TEMP  (F)` ~ CRIME_TYPE, finalData, function(t) {
+deltaMean = aggregate(`MAX_TEMP(F)` ~ CRIME_TYPE, finalData, function(t) {
   delta <- mean(t) - meanTemp})
 
 instances = list()
@@ -45,11 +49,11 @@ for(type in deltaMean$CRIME_TYPE) {
 deltaMean$instances = instances
 
 # plot delta mean temp by crime
-deltaMean = deltaMean[deltaMean$instances > 1000,] # remove non criminal crimes
+deltaMean = deltaMean[deltaMean$instances > 500,] # remove non criminal crimes
 deltaMean
 
-par(mar = c(15,4,4,2) + 0.1) # improve margins for long names
-barplot(deltaMean$`MAX_TEMP  (F)`, names.arg=deltaMean$CRIME_TYPE, las=2, main="Delta Temeperature Between Annual Average and Average by Crime in Chicago", ylab="Degrees Above Annual Average (~59 F)", xlab="Crime Type")
+par(mar = c(12,4,4,2) + 0.1) # improve margins for long names
+barplot(deltaMean$`MAX_TEMP(F)`, names.arg=deltaMean$CRIME_TYPE, las=2, main="Delta Temeperature Between Annual Average and Average by Crime in Chicago", ylab="Degrees Above Annual Average (~59 F)", xlab="Crime Type")
 par(mar = c(5,4,4,2) + 0.1) # reset margins
 
 
@@ -118,8 +122,6 @@ barplot(props, main='Proportion of Crimes by Weather', xlab='Day Type', ylab='Pr
 # Just Crime
 #
 
-library(ggmap)
-
 # Plot all crimes by type within Chicago
 chicago <- get_map(location = 'Chicago', zoom = 10)
 ggmap(chicago) +
@@ -134,15 +136,21 @@ ggmap(chicago) +
 # Finding what traffic crime happens in/around
 # Crimes by each congestion level
 crime_congestion_counts = table(finalData$CONGESTION_LEVEL)
-barplot(crime_congestion_counts, main='Crimes per Congestion Level', xlab='Congestion Level', ylab='Total Crimes')
 crime_table = as.data.frame(crime_congestion_counts)
 row.names(crime_table) = crime_table$Var1
 
+counts = c(crime_table['FreeFlow', 'Freq'], crime_table['Medium', 'Freq'], crime_table['Heavy', 'Freq'])
+names = c('FreeFlow', 'Medium', 'Heavy')
+barplot(counts, main='Crimes per Congestion Level', xlab='Congestion Level', ylab='Crimes', names.arg=names)
+
 # Total counts of frequency of each congestion level
 total_congestion_counts = table(trafficData$CONGESTION_LEVEL)
-barplot(total_congestion_counts, main='Congestion Level Counts', xlab='Congestion Level', ylab='Counts')
 total_table = as.data.frame(total_congestion_counts)
 row.names(total_table) = total_table$Var1
+
+counts = c(total_table['FreeFlow', 'Freq'], total_table['Medium', 'Freq'], total_table['Heavy', 'Freq'])
+barplot(counts, main='Congestion Level Counts', xlab='Congestion Level', ylab='Counts', names.arg=names)
+
 freeflow = total_table['FreeFlow','Freq']
 heavy = total_table['Heavy','Freq']
 medium = total_table['Medium','Freq']
@@ -166,4 +174,4 @@ barplot(counts, main='Crimes per Congestion Level (Scaled)', xlab='Congestion Le
 # EVERYTHING!
 #
 
-qplot(`MAX_TEMP  (F)`, `PRECIPITATION(in)`, data=finalData, facets=CONGESTION_LEVEL~CRIME_TYPE)
+qplot(`MAX_TEMP(F)`, `PRECIPITATION(in)`, data=finalData, facets=CONGESTION_LEVEL~CRIME_TYPE)
