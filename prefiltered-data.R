@@ -8,40 +8,49 @@ months = c('Jan', 'Feb', 'Mar', 'Apr', 'May', 'June', 'July', 'Aug', 'Sep', 'Oct
 weather <- separate(weatherData, col='DATE', into=c('year','month', 'day'), sep='-')
 
 # Plot average high by month
-meanTemp = mean(weather$MAX_TEMP...F.)
+meanTemp = mean(weather$`MAX_TEMP  (F)`)
 meanTemp
-weather$high = weather$MAX_TEMP...F.
+weather$high = weather$`MAX_TEMP  (F)`
 averageHigh = aggregate(high ~ month, weather, mean)
 barplot(averageHigh$high, names.arg=months, main="Average Temperature by Month in Chicago", ylab="Degrees F", xlab="Month")
 
 # Plot average precip by month
-avgPrecip = aggregate(PRECIPITATION.in. ~ month, weather, mean)
+avgPrecip = aggregate(`PRECIPITATION(in)` ~ month, weather, mean)
 avgPrecip
-barplot(avgPrecip$PRECIPITATION.in., names.arg=months, main="Average Percipitation by Month in Chicago", ylab="Inches", xlab="Month")
+barplot(avgPrecip$`PRECIPITATION(in)`, names.arg=months, main="Average Percipitation by Month in Chicago", ylab="Inches", xlab="Month")
 
 #
 # Weather vs Crime
 #
 
 # most common by temperature
-aggregate(combData$CRIME_TYPE, list(combData$MAX_TEMP...F.),
+aggregate(finalData$CRIME_TYPE, list(finalData$`MAX_TEMP  (F)`),
           function(x) { 
             ux <- unique(x) 
             ux[which.max(tabulate(match(x, ux)))]})
 
 # mode
-aggregate(MAX_TEMP...F. ~ CRIME_TYPE, combData, function(v) {
+aggregate(`MAX_TEMP  (F)` ~ CRIME_TYPE, finalData, function(v) {
   uniqv <- unique(v)
   uniqv[which.max(tabulate(match(v, uniqv)))]})
 
 # delta from mean
-deltaMean = aggregate(MAX_TEMP...F. ~ CRIME_TYPE, combData, function(v) {
-  delta <- mean(v) - meanTemp})
+deltaMean = aggregate(`MAX_TEMP  (F)` ~ CRIME_TYPE, finalData, function(t) {
+  delta <- mean(t) - meanTemp})
+
+instances = list()
+for(type in deltaMean$CRIME_TYPE) {
+  instances[[type]] <- sum(finalData$CRIME_TYPE == type)
+}
+deltaMean$instances = instances
 
 # plot delta mean temp by crime
-deltaMean = deltaMean[!grepl('NON-CRIMINAL', deltaMean$CRIME_TYPE),] # remove non criminal crimes
+deltaMean = deltaMean[deltaMean$instances > 1000,] # remove non criminal crimes
 deltaMean
-barplot(deltaMean$MAX_TEMP...F., names.arg=deltaMean$CRIME_TYPE, las=2, main="Delta Temeperature Between Annual Average and Average by Crime in Chicago", ylab="Degrees Above Annual Average (~59 F)", xlab="Crime Type")
+
+par(mar = c(15,4,4,2) + 0.1) # improve margins for long names
+barplot(deltaMean$`MAX_TEMP  (F)`, names.arg=deltaMean$CRIME_TYPE, las=2, main="Delta Temeperature Between Annual Average and Average by Crime in Chicago", ylab="Degrees Above Annual Average (~59 F)", xlab="Crime Type")
+par(mar = c(5,4,4,2) + 0.1) # reset margins
 
 
 # totals
@@ -109,12 +118,14 @@ barplot(props, main='Proportion of Crimes by Weather', xlab='Day Type', ylab='Pr
 # Just Crime
 #
 
-#Plot all crimes by type within Chicago
-#chicago <- get_map(location = 'chicago', zoom = 10)
-#ggmap(chicago) +
-#  geom_point(data = combData, mapping = aes(x = combData$LONGITUDE, y = combData$LATITUDE, color = combData$CRIME_TYPE))+
-#  labs(color = "Crime Type", x = "Longitude", y = "Latitude") +
-#  ggtitle("Locations of Crime within Chicago")
+library(ggmap)
+
+# Plot all crimes by type within Chicago
+chicago <- get_map(location = 'Chicago', zoom = 10)
+ggmap(chicago) +
+  geom_point(data = finalData, mapping = aes(x = finalData$LONGITUDE, y = finalData$LATITUDE, color = finalData$CRIME_TYPE))+
+  labs(color = "Crime Type", x = "Longitude", y = "Latitude") +
+  ggtitle("Locations of Crime within Chicago")
 
 #
 # Crime vs Traffic
@@ -128,6 +139,7 @@ crime_table = as.data.frame(crime_congestion_counts)
 row.names(crime_table) = crime_table$Var1
 
 # Total counts of frequency of each congestion level
+total_congestion_counts = table(trafficData$CONGESTION_LEVEL)
 barplot(total_congestion_counts, main='Congestion Level Counts', xlab='Congestion Level', ylab='Counts')
 total_table = as.data.frame(total_congestion_counts)
 row.names(total_table) = total_table$Var1
@@ -137,11 +149,11 @@ medium = total_table['Medium','Freq']
 sum = freeflow + heavy + medium
 
 # Proportion to scale crimes by
-ffp = 1- freeflow / sum
-hp = 1-  heavy / sum
+fp = 1- freeflow / sum
+hp = 1- heavy / sum
 mp = 1- medium / sum
 
-crime_table['FreeFlow', 'Freq'] = ffp * crime_table['FreeFlow', 'Freq']
+crime_table['FreeFlow', 'Freq'] = fp * crime_table['FreeFlow', 'Freq']
 crime_table['Heavy', 'Freq'] = hp * crime_table['Heavy', 'Freq']
 crime_table['Medium', 'Freq'] = mp * crime_table['Medium', 'Freq']
 
@@ -149,3 +161,9 @@ crime_table['Medium', 'Freq'] = mp * crime_table['Medium', 'Freq']
 counts = c(crime_table['FreeFlow', 'Freq'], crime_table['Medium', 'Freq'], crime_table['Heavy', 'Freq'])
 names = c('FreeFlow', 'Medium', 'Heavy')
 barplot(counts, main='Crimes per Congestion Level (Scaled)', xlab='Congestion Level', ylab='Crimes', names.arg=names)
+
+#
+# EVERYTHING!
+#
+
+qplot(`MAX_TEMP  (F)`, `PRECIPITATION(in)`, data=finalData, facets=CONGESTION_LEVEL~CRIME_TYPE)

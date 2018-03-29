@@ -45,9 +45,9 @@
 # dnf install proj-devel proj-epsg udunits2-devel geos-devel gdal-devel
 # install.packages('udunits2', type = 'source', repo = 'cran.rstudio.com', configure.args='--with-udunits2-include=/usr/include/udunits2')
 
-install.packages("sf")
-install.packages("sp")
-install.packages("maptools")
+#install.packages("sf")
+#install.packages("sp")
+#install.packages("maptools")
 
 #Library imports
 library(tidyverse)
