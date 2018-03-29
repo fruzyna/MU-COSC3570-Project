@@ -2,7 +2,7 @@
 #  Version:               1.2
 #  Author:                Cade Dombrowski, David Helminiak, Reid Holben, Liam Fruzyna
 #  Date Created:          6 March 2018
-#  Date Last Modified:    24 March 2018
+#  Date Last Modified:    29 March 2018
 #  Purpose:               Clean and analyze data found for weather, traffic and crime within Chicago for years 2013-2015
 #  Versioning Plan:       1.0: Data may be opened and viewed
 #                         1.1: All data clean and combined
@@ -337,15 +337,17 @@ trafficToJoin$SPEED <- NULL
 trafficToJoin$DATE <- NULL
 trafficToJoin$SEGMENTID <- NULL
 
-#Construct unique identifier for Date and Segment ID pairs
+combData$DATE <- as.Date(combData$DATE)
 combData$HASH <- as.integer(combData$DATE)*as.integer(combData$SEGMENTID)
 
-#Combine the datasets into a final amalgamation 
-finalData <- inner_join(combData, trafficToJoin, by = c("HASH")) 
+#Merge into final dataset, enter NA values where congestion data is not avaliable
+finalData <- full_join(combData, trafficToJoin, by = c("HASH")) 
 
-#Clean workspace up a bit
-remove(combData)
-remove(crimeData)
+#Remove rows where no crime was commited
+finalData <- finalData[!is.na(finalData$DATE),]
+
+
+#Clean workspace
 remove(crimePoint)
 remove(lineList)
 remove(spatialLineList)
