@@ -21,7 +21,7 @@ barplot(averageHigh$high, names.arg=months, main="Average Temperature by Month i
 # Plot average precip by month
 avgPrecip = aggregate(`PRECIPITATION(in)` ~ month, weather, mean)
 avgPrecip
-barplot(avgPrecip$`PRECIPITATION(in)`, names.arg=months, main="Average Percipitation by Month in Chicago", ylab="Inches", xlab="Month")
+barplot(avgPrecip$`PRECIPITATION(in)`, names.arg=months, main="Average Precipitation by Month in Chicago", ylab="Inches", xlab="Month")
 
 #
 # Weather vs Crime
