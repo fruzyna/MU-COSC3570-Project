@@ -58,6 +58,11 @@ title(xlab="Crime Type", line=11) # custom x label location
 par(mar = c(5,4,4,2) + 0.1) # reset margins
 
 
+# number of crimes by temperature
+crimesPerTemp = table(finalData$`MAX_TEMP(F)`)
+plot(crimesPerTemp, type='o', main='Number of Crimes by Temperature', ylab='Crimes',xlab='Temperature (F)')
+
+
 # totals
 total_days = nrow(weatherData)
 total_crimes = nrow(finalData)
