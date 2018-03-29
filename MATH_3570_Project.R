@@ -373,7 +373,6 @@ ggmap(chicago) +
 
 
 
-
 #
 # NOTES AREA
 #
