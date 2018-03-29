@@ -53,7 +53,7 @@ deltaMean = deltaMean[deltaMean$instances > 500,] # remove non criminal crimes
 deltaMean
 
 par(mar = c(12,4,4,2) + 0.1) # improve margins for long names
-barplot(deltaMean$`MAX_TEMP(F)`, names.arg=deltaMean$CRIME_TYPE, las=2, main="Delta Temeperature Between Annual Average and Average by Crime in Chicago", ylab="Degrees Above Annual Average (~59 F)", xlab="Crime Type")
+barplot(deltaMean$`MAX_TEMP(F)`, names.arg=deltaMean$CRIME_TYPE, las=2, main="Delta Temperature Between Annual Average and Average by Crime in Chicago", ylab="Degrees Above Annual Average (~59 F)", xlab="Crime Type")
 par(mar = c(5,4,4,2) + 0.1) # reset margins
 
 
