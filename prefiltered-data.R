@@ -153,10 +153,10 @@ clear_crime_prop = clear_crimes / total_crimes
 clear_crime_prop
 
 # scaled versions
-prop_crime_clear = clear_crime_prop / clear_prop
-prop_crime_rainy = rainy_crime_prop / rainy_prop
-prop_crime_heavy = heavy_crime_prop / heavy_prop
-prop_crime_thunder = thunder_crime_prop / thunder_prop
+prop_crime_clear = clear_crime_prop * clear_prop
+prop_crime_rainy = rainy_crime_prop * rainy_prop
+prop_crime_heavy = heavy_crime_prop * heavy_prop
+prop_crime_thunder = thunder_crime_prop * thunder_prop
 
 # draw it
 props = c(1, prop_crime_clear, prop_crime_rainy, prop_crime_heavy, prop_crime_thunder)
