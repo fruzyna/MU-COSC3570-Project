@@ -4,6 +4,7 @@
 library(tidyverse)
 library(ggmap)
 
+par(mfrow=c(1,1))
 #
 # Just Weather
 #
@@ -65,13 +66,13 @@ deltaMean = deltaMean[deltaMean$CRIME_TYPE != 'INTERFERENCE WITH PUBLIC OFFICER'
 deltaMean
 
 par(mar = c(15,4,4,2) + 0.1) # improve margins for long names
-barplot(deltaMean$`MAX_TEMP(F)`, names.arg=deltaMean$CRIME_TYPE, las=2, main="Delta Temperature Between Annual Average and Monthly Average by Crime in Chicago", ylab="Degrees Above Annual Average (~59 F)")
+barplot(deltaMean$`MAX_TEMP(F)`, names.arg=deltaMean$CRIME_TYPE, las=2, main="Delta Temperature Between Annual Average and Average by Crime in Chicago", ylab="Degrees Above Annual Average (~59 F)")
 title(xlab="Crime Type", line=13) # custom x label location
 par(mar = c(5,4,4,2) + 0.1) # reset margins
 
 # Average rain by crime
 par(mar = c(15,4,4,2) + 0.1) # improve margins for long names
-barplot(deltaMean$`PRECIPITATION(in)`, names.arg=deltaMean$CRIME_TYPE, las=2, main="Delta Precipitation Between Annual Average and Monthly Average by Crime in Chicago", ylab="Precipitation (in)")
+barplot(deltaMean$`PRECIPITATION(in)`, names.arg=deltaMean$CRIME_TYPE, las=2, main="Delta Precipitation Between Annual Average and Average by Crime in Chicago", ylab="Precipitation (in)")
 title(xlab="Crime Type", line=13) # custom x label location
 par(mar = c(5,4,4,2) + 0.1) # reset margins
 
@@ -82,16 +83,34 @@ tempCounts = as.data.frame(table(weatherData$`MAX_TEMP  (F)`))
 crimesPerTemp$Freq = crimesPerTemp$Freq / tempCounts$Freq
 plot(crimesPerTemp, type='o', main='Number of Crimes by Temperature', ylab='Crimes', xlab='Temperature (F)')
 
+# Domestic crimes by temperature
+domesticPerTemp = as.data.frame(table(finalData$`MAX_TEMP(F)`, finalData$DOMESTIC))
+domesticPerTemp = domesticPerTemp %>% spread(Var2, Freq)
+domesticPerTemp$rate = domesticPerTemp$true / (domesticPerTemp$true + domesticPerTemp$false)
+domesticPerTemp$scaled = domesticPerTemp$true / tempCounts$Freq
+
+plot(domesticPerTemp$Var1, domesticPerTemp$rate, main='Domestic Crime Rate by Temperature')
+plot(domesticPerTemp$Var1, domesticPerTemp$scaled, main='Domestic Crimes per Day by Temperature')
+
 # number of crimes by precipitation
+oneOver = 4
 roundWeather = weatherData
-roundWeather$`PRECIPITATION(in)` = round(roundWeather$`PRECIPITATION(in)`, digits=1)
+roundWeather$`PRECIPITATION(in)` = ceiling(roundWeather$`PRECIPITATION(in)` *oneOver)/oneOver#round(roundWeather$`PRECIPITATION(in)`, digits=1)
 roundCrime = finalData
-roundCrime$`PRECIPITATION(in)` = round(roundCrime$`PRECIPITATION(in)`, digits=1)
+roundCrime$`PRECIPITATION(in)` = ceiling(roundCrime$`PRECIPITATION(in)` *oneOver)/oneOver#round(roundCrime$`PRECIPITATION(in)`, digits=1)
 crimesPerPrecip = as.data.frame(table(roundCrime$`PRECIPITATION(in)`))
 precipCounts = as.data.frame(table(roundWeather$`PRECIPITATION(in)`))
 crimesPerPrecip$Freq = crimesPerPrecip$Freq / precipCounts$Freq
 plot(crimesPerPrecip, type='o', main='Number of Crimes by Precipitation', ylab='Crimes', xlab='Precipitation (in)')
 
+# Domestic crime by amount of rain... useless
+domesticPerPrecip = as.data.frame(table(roundCrime$`PRECIPITATION(in)`, roundCrime$DOMESTIC))
+domesticPerPrecip = domesticPerPrecip %>% spread(Var2, Freq)
+domesticPerPrecip$rate = domesticPerPrecip$true / (domesticPerPrecip$true + domesticPerPrecip$false)
+domesticPerPrecip$scaled = domesticPerPrecip$true / precipCounts$Freq
+
+plot(domesticPerPrecip$Var1, domesticPerPrecip$rate, main='Domestic Crime Rate by Precipitation')
+plot(domesticPerPrecip$Var1, domesticPerPrecip$scaled, main='Domestic Crimes per Day by Precipitation')
 
 # crimes by day
 crimesPerDay = table(finalData$DATE)
@@ -100,6 +119,57 @@ plot(crimesPerDay, type='o', main='Number of Crimes by Day', ylab='Crimes', xlab
 # traffic reports by day
 reportsPerDay = table(trafficData$DATE)
 plot(reportsPerDay, type='o', main='Number of Traffic Reports by Day', ylab='Traffic Reports', xlab='Date')
+
+#
+# Modeling
+#
+
+# Crime and Temperature
+par(mfrow=c(1,1))
+crimesPerTemp$Var1 <- as.numeric(as.character(crimesPerTemp$Var1))
+model <- lm(Freq ~ Var1, data=crimesPerTemp)
+summary(model)
+plot(crimesPerTemp, type='o', main='Number of Crimes by Temperature', ylab='Crimes', xlab='Temperature (F)')
+abline(model)
+
+# Attempt some prediction
+new.df <- data.frame(Var1=c(32, 55, 85))
+predict(model, new.df)
+
+# Crime and Precipitation
+par(mfrow=c(1,1))
+crimesPerPrecip$Var1 <- as.numeric(as.character(crimesPerPrecip$Var1))
+model <- lm(Freq ~ Var1, data=crimesPerPrecip)
+summary(model)
+plot(crimesPerPrecip, type='o', main='Number of Crimes by Precipitation', ylab='Crimes', xlab='Precipitation (in)')
+abline(model)
+
+# Domestic Crime and Temperature
+domesticPerTemp$Var1 <- as.numeric(as.character(domesticPerTemp$Var1))
+model <- lm(rate ~ Var1, data=domesticPerTemp)
+summary(model)
+plot(domesticPerTemp$Var1, domesticPerTemp$rate, type='o', main='Domestic Crime Rate by Temperature', ylab='Percentage of Domestic Crimes', xlab='Temperature (F)')
+abline(model)
+
+# Should look mostly like crime and temp
+model <- lm(scaled ~ Var1, data=domesticPerTemp)
+summary(model)
+plot(domesticPerTemp$Var1, domesticPerTemp$scaled, type='o', main='Domestic Crimes per Day by Temperature', ylab='Domestic Crimes', xlab='Temperature (F)')
+abline(model)
+
+
+# Domestic Crime and Precipitation
+domesticPerPrecip$Var1 <- as.numeric(as.character(domesticPerPrecip$Var1))
+model <- lm(rate ~ Var1, data=domesticPerPrecip)
+summary(model)
+plot(domesticPerPrecip$Var1, domesticPerPrecip$rate, type='o', main='Domestic Crime Rate by Precipitation', ylab='Percentage of Domestic Crimes', xlab='Precipitation (in)')
+abline(model)
+
+model <- lm(scaled ~ Var1, data=domesticPerPrecip)
+summary(model)
+plot(domesticPerPrecip$Var1, domesticPerPrecip$scaled, type='o', main='Domestic Crimes per Day by Precipitation', ylab='Domestic Crimes', xlab='Precipitation (in)')
+abline(model)
+
 
 #
 # Below data is using combData, because we screwed up
@@ -310,13 +380,14 @@ congestionLevelCrimes <- function(level)
   
   # Plot
   par(mar = c(15,4,4,2) + 0.1) # improve margins for long names
-  title = paste(level, " Traffic Crimes by Crime in Chicago")
-  barplot(cl_crimes$results, names.arg=cl_crimes$CRIME_TYPE, las=2, main=title, ylab="Number of Crimes")
+  title = paste(level, "Traffic Percentage of Crimes by Crime in Chicago")
+  barplot(cl_crimes$results, names.arg=cl_crimes$CRIME_TYPE, las=2, main=title, ylab="Percentage of Crimes")
   title(xlab="Crime Type", line=13) # custom x label location
   par(mar = c(5,4,4,2) + 0.1) # reset margins
 }
 
 # Each crime for traffic levels
+par(mfrow=c(2,2))
 congestionLevelCrimes('FreeFlow')
 congestionLevelCrimes('Medium')
 congestionLevelCrimes('Heavy')
@@ -324,15 +395,5 @@ congestionLevelCrimes('Heavy')
 #
 # EVERYTHING!
 #
-
-qplot(`MAX_TEMP(F)`, `PRECIPITATION(in)`, data=finalData, facets=CONGESTION_LEVEL~CRIME_TYPE)
-
-#
-# Modeling
-#
-par(mfrow=c(1,1))
-crimesPerTemp$Var1 <- as.numeric(as.character(crimesPerTemp$Var1))
-model <- lm(Freq ~ Var1, data=crimesPerTemp)
-summary(model)
-plot(crimesPerTemp, type='o', main='Number of Crimes by Temperature', ylab='Crimes', xlab='Temperature (F)')
-abline(model)
+# This takes forever, uncomment only if you need to run
+#qplot(`MAX_TEMP(F)`, `PRECIPITATION(in)`, data=finalData, facets=CONGESTION_LEVEL~CRIME_TYPE)
