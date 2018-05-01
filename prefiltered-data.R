@@ -18,10 +18,18 @@ weather$high = weather$`MAX_TEMP  (F)`
 averageHigh = aggregate(high ~ month, weather, mean)
 barplot(averageHigh$high, names.arg=months, main="Average Temperature by Month in Chicago", ylab="Degrees F", xlab="Month")
 
+meanPrecip = mean(weather$`PRECIPITATION(in)`, na.rm=TRUE)
+meanPrecip
+
 # Plot average precip by month
 avgPrecip = aggregate(`PRECIPITATION(in)` ~ month, weather, mean)
 avgPrecip
 barplot(avgPrecip$`PRECIPITATION(in)`, names.arg=months, main="Average Precipitation by Month in Chicago", ylab="Inches", xlab="Month")
+
+# Plot average precip by month
+avgWind = aggregate(`AVG_WIND_SPEED(MPH)` ~ month, weather, mean)
+avgWind
+barplot(avgWind$`AVG_WIND_SPEED(MPH)`, names.arg=months, main="Average Wind Speed by Month in Chicago", ylab="MPH", xlab="Month")
 
 #
 # Weather vs Crime
@@ -41,6 +49,9 @@ aggregate(`MAX_TEMP(F)` ~ CRIME_TYPE, finalData, function(v) {
 # delta from mean
 deltaMean = aggregate(`MAX_TEMP(F)` ~ CRIME_TYPE, finalData, function(t) {
   delta <- mean(t) - meanTemp})
+meanP = aggregate(`PRECIPITATION(in)` ~ CRIME_TYPE, finalData, function(t) {
+  delta <- mean(t) - meanPrecip})
+deltaMean$`PRECIPITATION(in)` = meanP$`PRECIPITATION(in)`
 
 instances = list()
 for(type in deltaMean$CRIME_TYPE) {
@@ -54,19 +65,41 @@ deltaMean = deltaMean[deltaMean$CRIME_TYPE != 'INTERFERENCE WITH PUBLIC OFFICER'
 deltaMean
 
 par(mar = c(15,4,4,2) + 0.1) # improve margins for long names
-barplot(deltaMean$`MAX_TEMP(F)`, names.arg=deltaMean$CRIME_TYPE, las=2, main="Delta Temperature Between Annual Average and Average by Crime in Chicago", ylab="Degrees Above Annual Average (~59 F)")
+barplot(deltaMean$`MAX_TEMP(F)`, names.arg=deltaMean$CRIME_TYPE, las=2, main="Delta Temperature Between Annual Average and Monthly Average by Crime in Chicago", ylab="Degrees Above Annual Average (~59 F)")
+title(xlab="Crime Type", line=13) # custom x label location
+par(mar = c(5,4,4,2) + 0.1) # reset margins
+
+# Average rain by crime
+par(mar = c(15,4,4,2) + 0.1) # improve margins for long names
+barplot(deltaMean$`PRECIPITATION(in)`, names.arg=deltaMean$CRIME_TYPE, las=2, main="Delta Precipitation Between Annual Average and Monthly Average by Crime in Chicago", ylab="Precipitation (in)")
 title(xlab="Crime Type", line=13) # custom x label location
 par(mar = c(5,4,4,2) + 0.1) # reset margins
 
 
 # number of crimes by temperature
-crimesPerTemp = table(finalData$`MAX_TEMP(F)`)
+crimesPerTemp = as.data.frame(table(finalData$`MAX_TEMP(F)`))
+tempCounts = as.data.frame(table(weatherData$`MAX_TEMP  (F)`))
+crimesPerTemp$Freq = crimesPerTemp$Freq / tempCounts$Freq
 plot(crimesPerTemp, type='o', main='Number of Crimes by Temperature', ylab='Crimes', xlab='Temperature (F)')
+
+# number of crimes by precipitation
+roundWeather = weatherData
+roundWeather$`PRECIPITATION(in)` = round(roundWeather$`PRECIPITATION(in)`, digits=1)
+roundCrime = finalData
+roundCrime$`PRECIPITATION(in)` = round(roundCrime$`PRECIPITATION(in)`, digits=1)
+crimesPerPrecip = as.data.frame(table(roundCrime$`PRECIPITATION(in)`))
+precipCounts = as.data.frame(table(roundWeather$`PRECIPITATION(in)`))
+crimesPerPrecip$Freq = crimesPerPrecip$Freq / precipCounts$Freq
+plot(crimesPerPrecip, type='o', main='Number of Crimes by Precipitation', ylab='Crimes', xlab='Precipitation (in)')
 
 
 # crimes by day
 crimesPerDay = table(finalData$DATE)
 plot(crimesPerDay, type='o', main='Number of Crimes by Day', ylab='Crimes', xlab='Date')
+
+# traffic reports by day
+reportsPerDay = table(trafficData$DATE)
+plot(reportsPerDay, type='o', main='Number of Traffic Reports by Day', ylab='Traffic Reports', xlab='Date')
 
 #
 # Below data is using combData, because we screwed up
@@ -152,20 +185,62 @@ clear_crimes = length(which(is_clear_crime))
 clear_crime_prop = clear_crimes / total_crimes
 clear_crime_prop
 
+# proportion of windy days
+is_windy_day = weatherData$`AVG_WIND_SPEED(MPH)` > 15.0
+windy_days = length(which(is_windy_day))
+windy_prop = windy_days / total_days
+windy_prop
+
+# proportion crime on windy days
+is_windy_crime = finalData$`AVG_WIND_SPEED(MPH)` > 15.0
+windy_crimes = length(which(is_windy_crime))
+windy_crime_prop = windy_crimes / total_crimes
+windy_crime_prop
+
+# proportion of cold days
+is_cold_day = weatherData$`MAX_TEMP  (F)` <= 32
+cold_days = length(which(is_cold_day))
+cold_prop = cold_days / total_days
+cold_prop
+
+# proportion crime on cold days
+is_cold_crime = finalData$`MAX_TEMP  (F)` <= 32
+cold_crimes = length(which(is_cold_crime))
+cold_crime_prop = cold_crimes / total_crimes
+cold_crime_prop
+
+# proportion of snow days
+is_snow_day = weatherData$`PRECIPITATION(in)` > 0.3 & weatherData$`MAX_TEMP  (F)` <= 32
+snow_days = length(which(is_snow_day))
+snow_prop = snow_days / total_days
+snow_prop
+
+# proportion crime on snow days
+is_snow_crime = finalData$`PRECIPITATION(in)` > 0.3 & finalData$`MAX_TEMP  (F)` <= 32
+snow_crimes = length(which(is_snow_crime))
+snow_crime_prop = snow_crimes / total_crimes
+snow_crime_prop
+
+
 # scaled versions
-prop_crime_clear = clear_crime_prop * clear_prop
-prop_crime_rainy = rainy_crime_prop * rainy_prop
-prop_crime_heavy = heavy_crime_prop * heavy_prop
-prop_crime_thunder = thunder_crime_prop * thunder_prop
+prop_crime_clear = clear_crime_prop / clear_prop
+prop_crime_rainy = rainy_crime_prop / rainy_prop
+prop_crime_heavy = heavy_crime_prop / heavy_prop
+prop_crime_windy = windy_crime_prop / windy_prop
+prop_crime_thunder = thunder_crime_prop / thunder_prop
+prop_crime_snow = snow_crime_prop / snow_prop
+prop_crime_cold = cold_crime_prop / cold_prop
 
 # draw it
-props = c(1, prop_crime_clear, prop_crime_rainy, prop_crime_heavy, prop_crime_thunder)
-names = c('Average', 'Clear', 'Rainy', 'Heavy Rain', 'Thunder')
+props = c(1, prop_crime_clear, prop_crime_rainy, prop_crime_heavy, prop_crime_thunder, prop_crime_windy, prop_crime_cold, prop_crime_cold)
+names = c('Average', 'Clear', 'Rainy', 'Heavy Rain', 'Thunder', 'Windy', 'Cold', 'Snow')
 barplot(props, main='Proportion of Crimes by Weather', xlab='Day Type', ylab='Proportion', names.arg=names)
 
 #
 # Just Crime
 #
+
+barplot(table(finalData$CRIME_TYPE))
 
 # Plot all crimes by type within Chicago
 chicago <- get_map(location = 'Chicago', zoom = 10)
@@ -215,8 +290,49 @@ counts = c(crime_table['FreeFlow', 'Freq'], crime_table['Medium', 'Freq'], crime
 names = c('FreeFlow', 'Medium', 'Heavy')
 barplot(counts, main='Crimes per Congestion Level (Scaled)', xlab='Congestion Level', ylab='Crimes', names.arg=names)
 
+
+congestionLevelCrimes <- function(level)
+{
+  # Get count of crimes for each level
+  cl_crimes = aggregate(CONGESTION_LEVEL ~ CRIME_TYPE, finalData[finalData$CONGESTION_LEVEL == level,], length)
+  
+  # Get total instances of each crime
+  instances = list()
+  for(type in cl_crimes$CRIME_TYPE) {
+    instances[[type]] <- sum(finalData$CRIME_TYPE == type)
+  }
+  cl_crimes$instances = instances
+  cl_crimes$results = 100 * as.numeric(cl_crimes$CONGESTION_LEVEL) / as.numeric(cl_crimes$instances)
+  
+  # Clean up
+  cl_crimes = cl_crimes[cl_crimes$instances > 500,]
+  cl_crimes = cl_crimes[cl_crimes$CRIME_TYPE != 'INTERFERENCE WITH PUBLIC OFFICER',]
+  
+  # Plot
+  par(mar = c(15,4,4,2) + 0.1) # improve margins for long names
+  title = paste(level, " Traffic Crimes by Crime in Chicago")
+  barplot(cl_crimes$results, names.arg=cl_crimes$CRIME_TYPE, las=2, main=title, ylab="Number of Crimes")
+  title(xlab="Crime Type", line=13) # custom x label location
+  par(mar = c(5,4,4,2) + 0.1) # reset margins
+}
+
+# Each crime for traffic levels
+congestionLevelCrimes('FreeFlow')
+congestionLevelCrimes('Medium')
+congestionLevelCrimes('Heavy')
+
 #
 # EVERYTHING!
 #
 
 qplot(`MAX_TEMP(F)`, `PRECIPITATION(in)`, data=finalData, facets=CONGESTION_LEVEL~CRIME_TYPE)
+
+#
+# Modeling
+#
+par(mfrow=c(1,1))
+crimesPerTemp$Var1 <- as.numeric(as.character(crimesPerTemp$Var1))
+model <- lm(Freq ~ Var1, data=crimesPerTemp)
+summary(model)
+plot(crimesPerTemp, type='o', main='Number of Crimes by Temperature', ylab='Crimes', xlab='Temperature (F)')
+abline(model)
