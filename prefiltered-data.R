@@ -310,7 +310,14 @@ barplot(props, main='Proportion of Crimes by Weather', xlab='Day Type', ylab='Pr
 # Just Crime
 #
 
-barplot(table(finalData$CRIME_TYPE))
+typeCounts = as.data.frame(table(finalData$CRIME_TYPE))
+typeCounts = typeCounts[typeCounts$Freq > 500,]
+typeCounts = typeCounts[typeCounts$Var1 != 'INTERFERENCE WITH PUBLIC OFFICER',]
+par(mar = c(15,4,4,2) + 0.1) # improve margins for long names
+title = paste(level, "Traffic Percentage of Crimes by Crime in Chicago")
+barplot(typeCounts$Freq, names=typeCounts$Var1, las=2, main='Occurances of Types of Crimes', ylab='Crimes')
+title(xlab="Crime Type", line=13) # custom x label location
+par(mar = c(5,4,4,2) + 0.1) # reset margins
 
 # Plot all crimes by type within Chicago
 chicago <- get_map(location = 'Chicago', zoom = 10)
