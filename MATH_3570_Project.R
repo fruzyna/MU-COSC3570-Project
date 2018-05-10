@@ -130,6 +130,11 @@ trafficData$Year = NULL
 trafficData$Month = NULL
 trafficData$Day = NULL
 
+#Visualize number of traffic reports - Note gap in reporting from 2013 to 2014...
+#trafficPerDay = table(trafficData$DATE)
+#plot(trafficPerDay, type = 'o', main='Number of Traffic Reports by Day', ylab='Traffic Reports')
+
+
 #
 #CLEAN WEATHER DATASET
 #
@@ -346,27 +351,113 @@ finalData <- full_join(combData, trafficToJoin, by = c("HASH"))
 #Remove rows where no crime was commited
 finalData <- finalData[!is.na(finalData$DATE),]
 
-
 #Clean workspace
 remove(crimePoint)
 remove(lineList)
 remove(spatialLineList)
 remove(nearestSegement)
-remove(trafficToJoin)
 
 #
 # Data Plotting
 #
 
-#Plot all crimes by type within Chicago
+#Generate spatial map of Chicago for overlay
 chicago <- get_map(location = 'chicago', zoom = 10)
+#Map environment variable may be found inside of directory if over-query_limit
+
+#Plot all crimes by type within Chicago as discrete points
 ggmap(chicago) +
-  geom_point(data = combData, mapping = aes(x = combData$LONGITUDE, y = combData$LATITUDE, color = combData$CRIME_TYPE))+
+  geom_point(data = finalData, mapping = aes(x = finalData$LONGITUDE, y = finalData$LATITUDE, color = finalData$CRIME_TYPE))+
   labs(color = "Crime Type", x = "Longitude", y = "Latitude") +
   ggtitle("Locations of Crime within Chicago")
 
+#Plot all crimes by type within Chicago in small multiples
+ggmap(chicago) +
+  geom_point(data = finalData, mapping = aes(x = finalData$LONGITUDE, y = finalData$LATITUDE), na.rm = TRUE) +
+  facet_wrap(~CRIME_TYPE) +
+  labs(x = "Longitude", y = "Latitude") +
+  ggtitle("Locations of Crime within Chicago")
 
+#Plot all crimes within Chicago in heatmap
+ggmap(chicago) +
+  geom_density2d(data = finalData, aes(x = finalData$LONGITUDE, y = finalData$LATITUDE), size = 0.3, na.rm = TRUE) + 
+  stat_density2d(data = finalData, aes(x = finalData$LONGITUDE, y = finalData$LATITUDE, fill = ..level.., alpha = ..level..), size = 0, bins = 32, geom = "polygon", show.legend = TRUE, na.rm = TRUE) + 
+  scale_fill_gradient(low = "purple", high = "red") + scale_alpha(range = c(0, 0.2), guide = FALSE) +
+  labs(x = "Longitude", y = "Latitude", fill = "Density") +
+  ggtitle("Locations of Crime within Chicago")
 
+#Plot all crimes by type within Chicago in heatmap small multiples
+
+miniCrime <- finalData
+miniCrime <- miniCrime[miniCrime$CRIME_TYPE != "HUMAN TRAFFICKING",]
+miniCrime <- miniCrime[miniCrime$CRIME_TYPE != "NON-CRIMINAL (SUBJECT SPECIFIED)",]
+miniCrime <- miniCrime[miniCrime$CRIME_TYPE != "OTHER OFFENSE",]
+miniCrime$CRIME_TYPE <- str_replace_all(miniCrime$CRIME_TYPE, 'CONCEALED CARRY LICENSE VIOLATION', 'CONCEALED/CARRY')
+miniCrime$CRIME_TYPE <- str_replace_all(miniCrime$CRIME_TYPE, 'OFFENSE INVOLVING CHILDREN', 'INVOLVES CHILDREN')
+
+ggmap(chicago) +
+  geom_density2d(data = miniCrime, aes(x = miniCrime$LONGITUDE, y = miniCrime$LATITUDE), size = 0.3) + 
+  stat_density2d(data = miniCrime, aes(x = miniCrime$LONGITUDE, y = miniCrime$LATITUDE, fill = ..level.., alpha = ..level..), size = 0, bins = 32, geom = "polygon", show.legend = TRUE, na.rm = TRUE) + 
+  scale_fill_gradient(low = "purple", high = "red") + scale_alpha(range = c(0, 0.2), guide = FALSE) +
+  facet_wrap(~CRIME_TYPE) +
+  theme(strip.text = element_text(size=6),
+        text = element_text(size=12)) +
+  labs(x = "Longitude", y = "Latitude", fill = "Density") +
+  ggtitle("Locations of Crime within Chicago")
+
+#Plot traffic congestion in heatmap
+#Create raw listing of coordinate values and a measure of congestion: 1/Speed
+trafficMapData <- full_join(trafficData, roadSegmentData, by = c("SEGMENTID")) 
+trafficMapData <- trafficMapData[complete.cases(trafficMapData), ]
+#Make a copy of the traffic data dataframe
+trafficMapData2 <- trafficMapData
+#Isolate start end coordinates in each set as just raw sets of coordinates
+trafficMapData$END_LONGITUDE <- NULL
+trafficMapData$END_LATITUDE <- NULL
+trafficMapData2$START_LONGITUDE <- NULL
+trafficMapData2$START_LATITUDE <- NULL
+colnames(trafficMapData)[colnames(trafficMapData)=="START_LONGITUDE"] <- "LONGITUDE"
+colnames(trafficMapData)[colnames(trafficMapData)=="START_LATITUDE"] <- "LATITUDE"
+colnames(trafficMapData2)[colnames(trafficMapData2)=="END_LONGITUDE"] <- "LONGITUDE"
+colnames(trafficMapData2)[colnames(trafficMapData2)=="END_LATITUDE"] <- "LATITUDE"
+#Combine the two sets
+trafficMapData <- rbind(trafficMapData, trafficMapData2)
+remove(trafficMapData2)
+trafficMapData$HASH <- NULL
+trafficMapData$DATE <- NULL
+trafficMapData$SEGMENTID <- NULL
+
+trafficMapData <- aggregate(trafficMapData$SPEED, by = list(trafficMapData$LATITUDE, trafficMapData$LONGITUDE), mean)
+colnames(trafficMapData)[colnames(trafficMapData)=="Group.1"] <- "LATITUDE"
+colnames(trafficMapData)[colnames(trafficMapData)=="Group.2"] <- "LONGITUDE"
+colnames(trafficMapData)[colnames(trafficMapData)=="x"] <- "SPEED"
+
+#trafficMapData$CONGESTION_LEVEL = 1/trafficMapData$SPEED
+#trafficMapData$SPEED <-NULL
+
+chicagoMap <- ggmap(chicago)
+
+ggmap(chicago) +
+  geom_polygon(data = trafficMapData, aes(x = trafficMapData$LONGITUDE, y = trafficMapData$LATITUDE, fill = trafficMapData$CONGESTION_LEVEL), alpha = 0.5, size = 10) +
+  scale_fill_gradient(low = "purple", high = "red") + scale_alpha(range = c(0, 0.2), guide = FALSE) +
+  labs(x = "Longitude", y = "Latitude", fill = "Congestion") +
+  ggtitle("Congestion Levels Within Chicago")
+
+  
+  
+  
+  
+ggmap(chicago) +
+  geom_point(data = trafficMapData, aes(x = trafficMapData$LONGITUDE, y = trafficMapData$LATITUDE, color = trafficMapData$CONGESTION_LEVEL), size = 0, show.legend = TRUE, na.rm = TRUE) +
+  scale_fill_gradient(low = "purple", high = "red") + scale_alpha(range = c(0, 0.2), guide = FALSE) +
+  labs(x = "Longitude", y = "Latitude", color = "Congestion") +
+  ggtitle("Congestion Levels Within Chicago")
+
+ggmap(chicago) +
+  stat_summary_2d(data = trafficMapData, aes(x = trafficMapData$LONGITUDE, y = trafficMapData$LATITUDE, z = trafficMapData$CONGESTION_LEVEL), bins = 64, show.legend = TRUE, na.rm = TRUE) +
+  scale_fill_gradient(low = "purple", high = "red") + scale_alpha(range = c(0, 0.2), guide = FALSE) +
+  labs(x = "Longitude", y = "Latitude", fill = "Congestion Level") +
+  ggtitle("Congestion Levels Within Chicago")
 
 
 
@@ -375,8 +466,12 @@ ggmap(chicago) +
 
 #
 # NOTES AREA
-#
+# Get number of rainy days
+# table(weatherData$`PRECIPITATION(in)` > 0)["TRUE"]
 # 
+#
+#
+#
 # #Traffic condensed using For loop; 10+ Hours!!!
 # uniqueNumbers <- unique(backup$HASH)
 # uniqueNumbers <- length(uniqueNumbers)
